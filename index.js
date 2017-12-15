@@ -13,12 +13,9 @@ const shopifyclient = shopify.buildClient({
 }, fetch);
 
 function checkSoldOut() {
-	if( total_product_types_available == total_product_types ) {
-		console.log("we are not sold out!");
-	} else if( total_product_types_available != total_product_types && total_product_types_available > 0  ) {
-		console.log("something sold out, but not everything");
-	} else if( total_product_types_available == 0 ) {
+	if( total_product_types_available == 0 ) {
 		console.log("we are sold out of everything");
+
 		client.messages.create({
 			from: process.env.TWILIO_FROM,
 			to: process.env.TWILIO_TO,
@@ -29,16 +26,24 @@ function checkSoldOut() {
 
 var total_product_types;
 var total_product_types_available;
+var bNotSoldOut;
+var start_time;
 app.get('/', (req, res) => {
+	start_time = (new Date()).getTime();
+	bNotSoldOut = false;
 	shopifyclient.product.fetchAll().then((products) => {
 		total_product_types = products.length;
 		total_product_types_available = 0;
 		var current = 0;
 		for(var i = 0; i < products.length; i++ ) {
-
 			shopifyclient.product.fetch(products[i].id).then((product) => {
-				if( product.variants[0].available ) {
+				if( product.variants[0].available) {
 					total_product_types_available++;
+					if( !bNotSoldOut ) {
+						console.log( (new Date()).getTime() - start_time ); // averaging around 700ms (min = 500ms, max = 1800ms)
+						bNotSoldOut = true;
+						console.log("we are not sold out!"); // this will happen once
+					}
 				}
 
 				current++;
